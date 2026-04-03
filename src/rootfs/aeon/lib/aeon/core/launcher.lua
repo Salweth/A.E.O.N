@@ -52,18 +52,6 @@ local function initCoreServices(services)
   services:require("logger"):info("AEON core services initialized.")
 end
 
-local function renderHome(session, apps, devices)
-  terminal.header("Agent Workstation", string.format("Agent: %s | Workstation: %s", session.agentName, session.workstationId))
-  terminal.section("Operational Status")
-  terminal.kv("Role", tostring(session.workstationRole))
-  terminal.kv("Clearance", tostring(session.agentClearance))
-  terminal.kv("Installed apps", tostring(#apps))
-  terminal.kv("Glasses", tostring(devices:isAvailable("glasses")))
-  terminal.kv("Printer", tostring(devices:isAvailable("printer")))
-  terminal.kv("Scanner", tostring(devices:isAvailable("scanner")))
-  terminal.spacer()
-end
-
 local function runApp(entry, context)
   if type(entry) == "table" and type(entry.run) == "function" then
     return pcall(entry.run, context)
@@ -131,7 +119,6 @@ function launcher.run()
     services:require("apps"):syncCatalog(apps.apps)
     context.appCatalog = apps.apps
     local launchableApps = services:require("apps"):listLaunchable(apps.apps)
-    renderHome(session, launchableApps, services:require("devices"))
 
     local menuItems = {}
     for _, app in ipairs(launchableApps) do
@@ -143,8 +130,7 @@ function launcher.run()
     table.insert(menuItems, {label = "System status"})
     table.insert(menuItems, {label = "Exit"})
 
-    terminal.section("Main Menu")
-    local choice = terminal.menu(menuItems)
+    local choice = terminal.dashboard(session, services:require("devices"), menuItems)
     if not choice then
       terminal.warn("Invalid selection.")
       terminal.pause()

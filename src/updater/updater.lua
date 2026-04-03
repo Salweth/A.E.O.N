@@ -1,5 +1,6 @@
 local filesystem = require("filesystem")
 local shell = require("shell")
+local okComputer, computer = pcall(require, "computer")
 
 local args, options = shell.parse(...)
 local repo = options.repo or "Salweth/A.E.O.N"
@@ -163,7 +164,11 @@ local function main()
 
   if rebootAfterInstall then
     info("Reboot requested.")
-    run("reboot")
+    if okComputer and computer and computer.shutdown then
+      computer.shutdown(true)
+    else
+      run("reboot")
+    end
   end
 
   return true
