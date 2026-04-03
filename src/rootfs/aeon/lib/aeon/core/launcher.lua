@@ -7,6 +7,7 @@ local runtimeServiceFactory = require("aeon.services.runtime")
 local storageServiceFactory = require("aeon.services.storage")
 local devicesServiceFactory = require("aeon.services.devices")
 local appsServiceFactory = require("aeon.services.apps")
+local audioServiceFactory = require("aeon.services.audio")
 
 local launcher = {}
 
@@ -41,6 +42,7 @@ local function registerCoreServices()
   services:register("storage", storageServiceFactory.create("/aeon/data"))
   services:register("devices", devicesServiceFactory.create())
   services:register("apps", appsServiceFactory.create("/aeon/config"))
+  services:register("audio", audioServiceFactory.create())
   return services
 end
 
@@ -50,6 +52,7 @@ local function initCoreServices(services)
   services:require("storage"):init()
   services:require("apps"):init()
   services:require("logger"):info("AEON core services initialized.")
+  terminal.setAudio(services:require("audio"))
 end
 
 local function runApp(entry, context)
@@ -164,6 +167,10 @@ function launcher.run()
       terminal.clear()
       return
     else
+      local audio = services:require("audio")
+      if audio and audio.error then
+        audio:error()
+      end
       terminal.warn("Unknown selection.")
       terminal.pause()
     end

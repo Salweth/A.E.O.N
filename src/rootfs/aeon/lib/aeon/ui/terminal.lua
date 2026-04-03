@@ -31,6 +31,7 @@ local lastTouch = {
   y = nil,
   time = 0
 }
+local audio = nil
 
 local function write(text)
   io.write(tostring(text or ""))
@@ -166,6 +167,21 @@ function terminal.clear()
   end
 
   resetColors()
+end
+
+function terminal.setAudio(service)
+  audio = service
+end
+
+local function playCue(name)
+  if not audio then
+    return
+  end
+
+  local fn = audio[name]
+  if type(fn) == "function" then
+    pcall(fn, audio)
+  end
 end
 
 function terminal.header(title, subtitle)
@@ -388,6 +404,7 @@ function terminal.menu(items)
       if not isDebouncedTouch(x, y) then
         local choice = selectionFromTouch(x, y, buttons)
         if choice then
+          playCue("click")
           return choice
         end
       end
@@ -396,6 +413,9 @@ function terminal.menu(items)
       local code = signal[4]
       local choice = selectionFromKey(char, code, #items)
       if choice ~= false then
+        if choice ~= nil then
+          playCue("confirm")
+        end
         return choice
       end
     end
@@ -525,6 +545,7 @@ function terminal.dashboard(session, devices, menuItems)
         local choice = selectionFromTouch(x, y, buttons)
         if choice then
           statusMessage = "Arming " .. tostring(menuItems[choice].label) .. "."
+          playCue("click")
           buttons = renderDashboard(choice)
           return choice
         end
@@ -535,6 +556,7 @@ function terminal.dashboard(session, devices, menuItems)
       local choice = selectionFromKey(char, code, #menuItems)
       if choice ~= false and choice ~= nil then
         statusMessage = "Arming " .. tostring(menuItems[choice].label) .. "."
+        playCue("confirm")
         buttons = renderDashboard(choice)
         return choice
       end
@@ -543,9 +565,11 @@ function terminal.dashboard(session, devices, menuItems)
       if newIndex ~= selectedIndex then
         selectedIndex = newIndex
         statusMessage = "Focused module: " .. tostring(menuItems[selectedIndex].label)
+        playCue("focus")
         buttons = renderDashboard()
       elseif confirmed then
         statusMessage = "Arming " .. tostring(menuItems[selectedIndex].label) .. "."
+        playCue("confirm")
         buttons = renderDashboard(selectedIndex)
         return selectedIndex
       end
