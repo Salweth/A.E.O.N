@@ -1,0 +1,39 @@
+local filesystem = require("filesystem")
+package.path = package.path .. ";/aeon/lib/?.lua;/aeon/lib/?/init.lua"
+
+local target = "/aeon/bin/aeon.lua"
+
+if not filesystem.exists(target) then
+  io.stderr:write("AEON launcher missing: " .. target .. "\n")
+  return
+end
+
+local loaded, loadErr = loadfile(target)
+if not loaded then
+  io.stderr:write("Unable to load AEON launcher: " .. tostring(loadErr) .. "\n")
+  return
+end
+
+local ok, result = pcall(loaded)
+if not ok then
+  io.stderr:write("AEON launcher crashed during load: " .. tostring(result) .. "\n")
+  return
+end
+
+if type(result) == "table" and type(result.run) == "function" then
+  local runOk, runErr = pcall(result.run)
+  if not runOk then
+    io.stderr:write("AEON runtime error: " .. tostring(runErr) .. "\n")
+  end
+  return
+end
+
+if type(result) == "function" then
+  local runOk, runErr = pcall(result)
+  if not runOk then
+    io.stderr:write("AEON runtime error: " .. tostring(runErr) .. "\n")
+  end
+  return
+end
+
+io.stderr:write("AEON launcher did not return a runnable entry point.\n")
