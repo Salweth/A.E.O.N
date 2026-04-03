@@ -338,6 +338,32 @@ local function selectionFromKey(char, code, itemCount)
   return false
 end
 
+local function navigationFromKey(code, itemCount, selectedIndex)
+  if not okKeyboard or not keyboard then
+    return selectedIndex, false
+  end
+
+  if code == keyboard.keys.up then
+    if selectedIndex <= 1 then
+      return itemCount, false
+    end
+    return selectedIndex - 1, false
+  end
+
+  if code == keyboard.keys.down then
+    if selectedIndex >= itemCount then
+      return 1, false
+    end
+    return selectedIndex + 1, false
+  end
+
+  if code == keyboard.keys.enter then
+    return selectedIndex, true
+  end
+
+  return selectedIndex, false
+end
+
 function terminal.menu(items)
   if not canDraw() or not okEvent or not event then
     terminal.section("Available Actions")
@@ -392,16 +418,6 @@ function terminal.dashboard(session, devices, menuItems)
   end
 
   local width, height = resolution()
-  terminal.clear()
-
-  drawBox(2, 1, width - 2, 6, "AEON // OPERATIVE WORKSTATION", {
-    fg = palette.line,
-    bg = palette.panel,
-    title = palette.accent
-  })
-  drawText(4, 3, "ACTIVE AGENT TERMINAL", palette.text, palette.panel, width - 8)
-  drawText(4, 4, string.format("Agent %s // Workstation %s", session.agentName, session.workstationId), palette.dim, palette.panel, width - 8)
-
   local leftX = 3
   local leftY = 8
   local leftW = math.floor((width - 6) * 0.58)
@@ -411,59 +427,92 @@ function terminal.dashboard(session, devices, menuItems)
   local statusH = 12
   local deviceH = 9
 
-  drawBox(leftX, leftY, leftW, menuPanelH, "Mission Deck", {
-    fg = palette.line,
-    bg = palette.panelAlt,
-    title = palette.accentAlt
-  })
+  local selectedIndex = 1
+  local statusMessage = "Select a module with arrows, number keys, or touch."
 
-  local buttons = {}
-  for index, item in ipairs(menuItems) do
-    local buttonY = leftY + 1 + ((index - 1) * 3)
-    local bg = palette.panel
-    fill(leftX + 2, buttonY, leftW - 4, 2, " ", palette.text, bg)
-    drawText(leftX + 4, buttonY, string.format("%d.", index), palette.accent, bg)
-    drawText(leftX + 9, buttonY, clip(item.label, leftW - 13), palette.text, bg)
-    drawHorizontal(leftX + 2, buttonY + 1, leftW - 4, "-", palette.line, bg)
-    table.insert(buttons, {
-      index = index,
-      x1 = leftX + 2,
-      y1 = buttonY,
-      x2 = leftX + leftW - 3,
-      y2 = buttonY + 1,
-      active = true
+  local function renderDashboard(armedIndex)
+    terminal.clear()
+
+    drawBox(2, 1, width - 2, 6, "AEON // OPERATIVE WORKSTATION", {
+      fg = palette.line,
+      bg = palette.panel,
+      title = palette.accent
     })
+    drawText(4, 3, "ACTIVE AGENT TERMINAL", palette.text, palette.panel, width - 8)
+    drawText(4, 4, string.format("Agent %s // Workstation %s", session.agentName, session.workstationId), palette.dim, palette.panel, width - 8)
+
+    drawBox(leftX, leftY, leftW, menuPanelH, "Mission Deck", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+
+    local buttons = {}
+    for index, item in ipairs(menuItems) do
+      local buttonY = leftY + 1 + ((index - 1) * 3)
+      local isSelected = index == selectedIndex
+      local isArmed = armedIndex == index
+      local bg = isSelected and palette.accent or palette.panel
+      local fg = isSelected and palette.bg or palette.text
+      local accent = isSelected and palette.bg or palette.accent
+      local lineColor = isSelected and palette.accentAlt or palette.line
+
+      if isArmed then
+        bg = palette.accentAlt
+        fg = palette.bg
+        accent = palette.bg
+        lineColor = palette.accent
+      end
+
+      fill(leftX + 2, buttonY, leftW - 4, 2, " ", fg, bg)
+      drawText(leftX + 4, buttonY, string.format("%d.", index), accent, bg)
+      drawText(leftX + 9, buttonY, clip(item.label, leftW - 13), fg, bg)
+      drawHorizontal(leftX + 2, buttonY + 1, leftW - 4, "-", lineColor, bg)
+      table.insert(buttons, {
+        index = index,
+        x1 = leftX + 2,
+        y1 = buttonY,
+        x2 = leftX + leftW - 3,
+        y2 = buttonY + 1,
+        active = true
+      })
+    end
+
+    drawText(leftX + 2, leftY + menuPanelH - 2, statusMessage, palette.dim, palette.panelAlt, leftW - 4)
+
+    drawBox(rightX, leftY, rightW, statusH, "Operational Status", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+    drawText(rightX + 3, leftY + 2, "Role", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + 2, tostring(session.workstationRole), palette.text, palette.panelAlt, rightW - 18)
+    drawText(rightX + 3, leftY + 4, "Clearance", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + 4, tostring(session.agentClearance), palette.text, palette.panelAlt, rightW - 18)
+    drawText(rightX + 3, leftY + 6, "Loaded Apps", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + 6, tostring(#menuItems - 3), palette.text, palette.panelAlt, rightW - 18)
+    drawText(rightX + 3, leftY + 8, "Focus", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + 8, clip(menuItems[selectedIndex].label, rightW - 18), palette.ok, palette.panelAlt, rightW - 18)
+
+    drawBox(rightX, leftY + statusH + 1, rightW, deviceH, "Attached Devices", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+    drawText(rightX + 3, leftY + statusH + 3, "Glasses", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + statusH + 3, tostring(devices:isAvailable("glasses")), devices:isAvailable("glasses") and palette.ok or palette.warn, palette.panelAlt)
+    drawText(rightX + 3, leftY + statusH + 5, "Printer", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + statusH + 5, tostring(devices:isAvailable("printer")), devices:isAvailable("printer") and palette.ok or palette.warn, palette.panelAlt)
+    drawText(rightX + 3, leftY + statusH + 7, "Scanner", palette.dim, palette.panelAlt)
+    drawText(rightX + 15, leftY + statusH + 7, tostring(devices:isAvailable("scanner")), devices:isAvailable("scanner") and palette.ok or palette.warn, palette.panelAlt)
+
+    drawText(3, height - 2, "Navigation: arrows, numbers, enter, or touch.", palette.dim, palette.bg, width - 6)
+    drawText(3, height - 1, "AEON desk interface // Touch-enabled command deck", palette.dim, palette.bg, width - 6)
+
+    return buttons
   end
 
-  drawText(leftX + 2, leftY + menuPanelH - 2, "Touch a module panel or use number keys.", palette.dim, palette.panelAlt, leftW - 4)
-
-  drawBox(rightX, leftY, rightW, statusH, "Operational Status", {
-    fg = palette.line,
-    bg = palette.panelAlt,
-    title = palette.accentAlt
-  })
-  drawText(rightX + 3, leftY + 2, "Role", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + 2, tostring(session.workstationRole), palette.text, palette.panelAlt, rightW - 18)
-  drawText(rightX + 3, leftY + 4, "Clearance", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + 4, tostring(session.agentClearance), palette.text, palette.panelAlt, rightW - 18)
-  drawText(rightX + 3, leftY + 6, "Loaded Apps", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + 6, tostring(#menuItems - 3), palette.text, palette.panelAlt, rightW - 18)
-  drawText(rightX + 3, leftY + 8, "Session", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + 8, "Operational", palette.ok, palette.panelAlt, rightW - 18)
-
-  drawBox(rightX, leftY + statusH + 1, rightW, deviceH, "Attached Devices", {
-    fg = palette.line,
-    bg = palette.panelAlt,
-    title = palette.accentAlt
-  })
-  drawText(rightX + 3, leftY + statusH + 3, "Glasses", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + statusH + 3, tostring(devices:isAvailable("glasses")), devices:isAvailable("glasses") and palette.ok or palette.warn, palette.panelAlt)
-  drawText(rightX + 3, leftY + statusH + 5, "Printer", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + statusH + 5, tostring(devices:isAvailable("printer")), devices:isAvailable("printer") and palette.ok or palette.warn, palette.panelAlt)
-  drawText(rightX + 3, leftY + statusH + 7, "Scanner", palette.dim, palette.panelAlt)
-  drawText(rightX + 15, leftY + statusH + 7, tostring(devices:isAvailable("scanner")), devices:isAvailable("scanner") and palette.ok or palette.warn, palette.panelAlt)
-
-  drawText(3, height - 1, "AEON desk interface // Touch-enabled command deck", palette.dim, palette.bg, width - 6)
+  local buttons = renderDashboard()
 
   while true do
     local signal = {event.pull()}
@@ -475,6 +524,8 @@ function terminal.dashboard(session, devices, menuItems)
       if not isDebouncedTouch(x, y) then
         local choice = selectionFromTouch(x, y, buttons)
         if choice then
+          statusMessage = "Arming " .. tostring(menuItems[choice].label) .. "."
+          buttons = renderDashboard(choice)
           return choice
         end
       end
@@ -482,8 +533,21 @@ function terminal.dashboard(session, devices, menuItems)
       local char = signal[3]
       local code = signal[4]
       local choice = selectionFromKey(char, code, #menuItems)
-      if choice ~= false then
+      if choice ~= false and choice ~= nil then
+        statusMessage = "Arming " .. tostring(menuItems[choice].label) .. "."
+        buttons = renderDashboard(choice)
         return choice
+      end
+
+      local newIndex, confirmed = navigationFromKey(code, #menuItems, selectedIndex)
+      if newIndex ~= selectedIndex then
+        selectedIndex = newIndex
+        statusMessage = "Focused module: " .. tostring(menuItems[selectedIndex].label)
+        buttons = renderDashboard()
+      elseif confirmed then
+        statusMessage = "Arming " .. tostring(menuItems[selectedIndex].label) .. "."
+        buttons = renderDashboard(selectedIndex)
+        return selectedIndex
       end
     end
   end
