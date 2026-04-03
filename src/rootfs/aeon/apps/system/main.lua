@@ -28,8 +28,10 @@ return {
     local runtimeSession = runtime:getSession() or {}
     local catalog = {}
 
-    for _, app in ipairs(apps:listCatalog(context.appCatalog or {})) do
-      table.insert(catalog, app)
+    if apps and type(apps.listCatalog) == "function" then
+      for _, app in ipairs(apps:listCatalog(context.appCatalog or {})) do
+        table.insert(catalog, app)
+      end
     end
 
     ui.header("System", "Local workstation status")
@@ -40,6 +42,7 @@ return {
     ui.info("Clearance: " .. tostring(agent.clearance or session.agentClearance))
     ui.info("Runtime session agent: " .. tostring(runtimeSession.agentName or "unknown"))
     ui.info("Devices: glasses=" .. tostring(devices:isAvailable("glasses")) .. ", printer=" .. tostring(devices:isAvailable("printer")) .. ", scanner=" .. tostring(devices:isAvailable("scanner")))
+    ui.info("Apps service available: " .. tostring(apps ~= nil))
     ui.info("Apps registered: " .. tostring(#catalog))
 
     for _, app in ipairs(catalog) do
