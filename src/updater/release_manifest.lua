@@ -18,17 +18,9 @@ return {
     "/aeon/lib/aeon/services",
     "/aeon/lib/aeon/ui",
     "/aeon/runtime",
-    "/bin"
+    "/bin",
   },
   files = {
-    {
-      source = "src/rootfs/bin/aeon",
-      target = "/bin/aeon"
-    },
-    {
-      source = "src/rootfs/aeon/bin/aeon.lua",
-      target = "/aeon/bin/aeon.lua"
-    },
     {
       source = "src/rootfs/aeon/apps/documents/main.lua",
       target = "/aeon/apps/documents/main.lua"
@@ -54,6 +46,10 @@ return {
       target = "/aeon/apps/system/manifest.lua"
     },
     {
+      source = "src/rootfs/aeon/bin/aeon.lua",
+      target = "/aeon/bin/aeon.lua"
+    },
+    {
       source = "src/rootfs/aeon/lib/aeon/core/app_registry.lua",
       target = "/aeon/lib/aeon/core/app_registry.lua"
     },
@@ -66,12 +62,12 @@ return {
       target = "/aeon/lib/aeon/core/service_registry.lua"
     },
     {
-      source = "src/rootfs/aeon/lib/aeon/services/config.lua",
-      target = "/aeon/lib/aeon/services/config.lua"
-    },
-    {
       source = "src/rootfs/aeon/lib/aeon/services/apps.lua",
       target = "/aeon/lib/aeon/services/apps.lua"
+    },
+    {
+      source = "src/rootfs/aeon/lib/aeon/services/config.lua",
+      target = "/aeon/lib/aeon/services/config.lua"
     },
     {
       source = "src/rootfs/aeon/lib/aeon/services/devices.lua",
@@ -92,6 +88,10 @@ return {
     {
       source = "src/rootfs/aeon/lib/aeon/ui/terminal.lua",
       target = "/aeon/lib/aeon/ui/terminal.lua"
-    }
+    },
+    {
+      source = "src/rootfs/bin/aeon",
+      target = "/bin/aeon"
+    },
   }
 }

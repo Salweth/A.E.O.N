@@ -13,6 +13,30 @@ Le fichier [updater.lua](C:\Users\romai\Desktop\Codex\Aeon\src\updater\updater.l
 
 - [updater.lua](C:\Users\romai\Desktop\Codex\Aeon\src\updater\updater.lua)
 - [release_manifest.lua](C:\Users\romai\Desktop\Codex\Aeon\src\updater\release_manifest.lua)
+- [generate_release_manifest.ps1](C:\Users\romai\Desktop\Codex\Aeon\src\updater\generate_release_manifest.ps1)
+
+## Regenerer le manifeste
+
+Le manifeste de release ne doit plus etre maintenu a la main.
+Il est regenere a partir de `src/rootfs`.
+
+Depuis la racine du projet :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\generate-release-manifest.ps1
+```
+
+Ou avec des valeurs explicites :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\generate-release-manifest.ps1 -Repo Salweth/A.E.O.N -Branch main -Version 2.0.0-alpha
+```
+
+Le script :
+
+- scanne tous les fichiers de `src/rootfs`
+- reconstruit la liste des dossiers cibles
+- regenere `src/updater/release_manifest.lua`
 
 ## Usage sur OpenComputers
 
