@@ -28,7 +28,8 @@ local function buildContext(services, session)
     services = services:all(),
     runtime = services:require("runtime"),
     ui = terminal,
-    logger = services:require("logger")
+    logger = services:require("logger"),
+    appCatalog = {}
   }
 end
 
@@ -120,10 +121,12 @@ function launcher.run()
   local apps = appRegistryFactory.create("/aeon/apps")
   apps:scan()
   services:require("apps"):syncCatalog(apps.apps)
+  context.appCatalog = apps.apps
 
   while true do
     apps:scan()
     services:require("apps"):syncCatalog(apps.apps)
+    context.appCatalog = apps.apps
     local launchableApps = services:require("apps"):listLaunchable(apps.apps)
     renderHome(session, launchableApps, services:require("devices"))
 

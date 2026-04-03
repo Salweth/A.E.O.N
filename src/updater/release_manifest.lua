@@ -7,6 +7,7 @@ return {
     "/aeon/apps",
     "/aeon/apps/documents",
     "/aeon/apps/missions",
+    "/aeon/apps/system",
     "/aeon/bin",
     "/aeon/config",
     "/aeon/data",
@@ -43,6 +44,14 @@ return {
     {
       source = "src/rootfs/aeon/apps/missions/manifest.lua",
       target = "/aeon/apps/missions/manifest.lua"
+    },
+    {
+      source = "src/rootfs/aeon/apps/system/main.lua",
+      target = "/aeon/apps/system/main.lua"
+    },
+    {
+      source = "src/rootfs/aeon/apps/system/manifest.lua",
+      target = "/aeon/apps/system/manifest.lua"
     },
     {
       source = "src/rootfs/aeon/lib/aeon/core/app_registry.lua",
