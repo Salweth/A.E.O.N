@@ -6,6 +6,7 @@ local loggerServiceFactory = require("aeon.services.logger")
 local runtimeServiceFactory = require("aeon.services.runtime")
 local storageServiceFactory = require("aeon.services.storage")
 local devicesServiceFactory = require("aeon.services.devices")
+local appsServiceFactory = require("aeon.services.apps")
 
 local launcher = {}
 
@@ -38,6 +39,7 @@ local function registerCoreServices()
   services:register("runtime", runtimeServiceFactory.create("/aeon/runtime"))
   services:register("storage", storageServiceFactory.create("/aeon/data"))
   services:register("devices", devicesServiceFactory.create())
+  services:register("apps", appsServiceFactory.create("/aeon/config"))
   return services
 end
 
@@ -45,6 +47,7 @@ local function initCoreServices(services)
   services:require("config"):init()
   services:require("runtime"):init()
   services:require("storage"):init()
+  services:require("apps"):init()
   services:require("logger"):info("AEON core services initialized.")
 end
 
@@ -69,6 +72,42 @@ local function runApp(entry, context)
   return false, "Invalid app entry point."
 end
 
+local function manageApplications(appRegistry, appsService, logger)
+  while true do
+    local catalog = appsService:listCatalog(appRegistry.apps)
+    terminal.header("Application Manager", "Enable or disable workstation apps")
+
+    for index, app in ipairs(catalog) do
+      local status = app.enabled and "enabled" or "disabled"
+      local defaultTag = app.defaultInstalled and "default" or "optional"
+      terminal.info(string.format("%d. %s [%s] (%s)", index, app.name, status, defaultTag))
+    end
+
+    io.write("\n")
+    io.write("Select app number to toggle, or press enter to return > ")
+    local raw = io.read()
+    if raw == nil or raw == "" then
+      return
+    end
+
+    local choice = tonumber(raw)
+    local selected = choice and catalog[choice]
+    if not selected then
+      terminal.warn("Invalid application selection.")
+      terminal.pause()
+    else
+      local enabled, err = appsService:toggleEnabled(selected.id)
+      if not enabled and err then
+        terminal.error("Unable to update app state: " .. tostring(err))
+      else
+        logger:info("App state changed: " .. tostring(selected.id) .. " enabled=" .. tostring(enabled))
+        terminal.info(selected.name .. " is now " .. (enabled and "enabled" or "disabled") .. ".")
+      end
+      terminal.pause()
+    end
+  end
+end
+
 function launcher.run()
   local services = registerCoreServices()
   initCoreServices(services)
@@ -80,9 +119,12 @@ function launcher.run()
   local context = buildContext(services, session)
   local apps = appRegistryFactory.create("/aeon/apps")
   apps:scan()
+  services:require("apps"):syncCatalog(apps.apps)
 
   while true do
-    local launchableApps = apps:listLaunchable()
+    apps:scan()
+    services:require("apps"):syncCatalog(apps.apps)
+    local launchableApps = services:require("apps"):listLaunchable(apps.apps)
     renderHome(session, launchableApps, services:require("devices"))
 
     local menuItems = {}
@@ -91,6 +133,7 @@ function launcher.run()
         label = (app.launcher and app.launcher.label) or app.name or app.id
       })
     end
+    table.insert(menuItems, {label = "Application manager"})
     table.insert(menuItems, {label = "System status"})
     table.insert(menuItems, {label = "Exit"})
 
@@ -116,13 +159,16 @@ function launcher.run()
         end
       end
     elseif choice == (#launchableApps + 1) then
+      manageApplications(apps, services:require("apps"), services:require("logger"))
+    elseif choice == (#launchableApps + 2) then
       terminal.header("System Status", "Core workstation services")
       terminal.info("Storage root: /aeon/data")
       terminal.info("Config root: /aeon/config")
       terminal.info("Runtime root: /aeon/runtime")
       terminal.info("App root: /aeon/apps")
+      terminal.info("Apps config: /aeon/config/apps.cfg")
       terminal.pause()
-    elseif choice == (#launchableApps + 2) then
+    elseif choice == (#launchableApps + 3) then
       terminal.clear()
       return
     else
