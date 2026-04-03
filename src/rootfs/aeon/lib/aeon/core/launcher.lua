@@ -54,11 +54,14 @@ end
 
 local function renderHome(session, apps, devices)
   terminal.header("Agent Workstation", string.format("Agent: %s | Workstation: %s", session.agentName, session.workstationId))
-  terminal.info("Role: " .. tostring(session.workstationRole))
-  terminal.info("Clearance: " .. tostring(session.agentClearance))
-  terminal.info("Installed apps: " .. tostring(#apps))
-  terminal.info("Devices online: glasses=" .. tostring(devices:isAvailable("glasses")) .. ", printer=" .. tostring(devices:isAvailable("printer")) .. ", scanner=" .. tostring(devices:isAvailable("scanner")))
-  io.write("\n")
+  terminal.section("Operational Status")
+  terminal.kv("Role", tostring(session.workstationRole))
+  terminal.kv("Clearance", tostring(session.agentClearance))
+  terminal.kv("Installed apps", tostring(#apps))
+  terminal.kv("Glasses", tostring(devices:isAvailable("glasses")))
+  terminal.kv("Printer", tostring(devices:isAvailable("printer")))
+  terminal.kv("Scanner", tostring(devices:isAvailable("scanner")))
+  terminal.spacer()
 end
 
 local function runApp(entry, context)
@@ -77,6 +80,7 @@ local function manageApplications(appRegistry, appsService, logger)
   while true do
     local catalog = appsService:listCatalog(appRegistry.apps)
     terminal.header("Application Manager", "Enable or disable workstation apps")
+    terminal.section("Installed Modules")
 
     for index, app in ipairs(catalog) do
       local status = app.enabled and "enabled" or "disabled"
@@ -84,9 +88,8 @@ local function manageApplications(appRegistry, appsService, logger)
       terminal.info(string.format("%d. %s [%s] (%s)", index, app.name, status, defaultTag))
     end
 
-    io.write("\n")
-    io.write("Select app number to toggle, or press enter to return > ")
-    local raw = io.read()
+    terminal.spacer()
+    local raw = terminal.prompt("Select app number to toggle, or press enter to return")
     if raw == nil or raw == "" then
       return
     end
@@ -140,8 +143,7 @@ function launcher.run()
     table.insert(menuItems, {label = "System status"})
     table.insert(menuItems, {label = "Exit"})
 
-    terminal.info("Main menu")
-    io.write("\n")
+    terminal.section("Main Menu")
     local choice = terminal.menu(menuItems)
     if not choice then
       terminal.warn("Invalid selection.")
@@ -165,11 +167,12 @@ function launcher.run()
       manageApplications(apps, services:require("apps"), services:require("logger"))
     elseif choice == (#launchableApps + 2) then
       terminal.header("System Status", "Core workstation services")
-      terminal.info("Storage root: /aeon/data")
-      terminal.info("Config root: /aeon/config")
-      terminal.info("Runtime root: /aeon/runtime")
-      terminal.info("App root: /aeon/apps")
-      terminal.info("Apps config: /aeon/config/apps.cfg")
+      terminal.section("Filesystem Layout")
+      terminal.kv("Storage root", "/aeon/data")
+      terminal.kv("Config root", "/aeon/config")
+      terminal.kv("Runtime root", "/aeon/runtime")
+      terminal.kv("App root", "/aeon/apps")
+      terminal.kv("Apps config", "/aeon/config/apps.cfg")
       terminal.pause()
     elseif choice == (#launchableApps + 3) then
       terminal.clear()

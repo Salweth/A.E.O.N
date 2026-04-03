@@ -35,18 +35,27 @@ return {
     end
 
     ui.header("System", "Local workstation status")
-    ui.info("Installed version: " .. tostring(readVersion()))
-    ui.info("Workstation id: " .. tostring(workstation.id or session.workstationId))
-    ui.info("Workstation role: " .. tostring(workstation.role or session.workstationRole))
-    ui.info("Agent: " .. tostring(agent.name or session.agentName))
-    ui.info("Clearance: " .. tostring(agent.clearance or session.agentClearance))
-    ui.info("Runtime session agent: " .. tostring(runtimeSession.agentName or "unknown"))
-    ui.info("Devices: glasses=" .. tostring(devices:isAvailable("glasses")) .. ", printer=" .. tostring(devices:isAvailable("printer")) .. ", scanner=" .. tostring(devices:isAvailable("scanner")))
-    ui.info("Apps service available: " .. tostring(apps ~= nil))
-    ui.info("Apps registered: " .. tostring(#catalog))
+    ui.section("System Identity")
+    ui.kv("Installed version", tostring(readVersion()))
+    ui.kv("Workstation id", tostring(workstation.id or session.workstationId))
+    ui.kv("Workstation role", tostring(workstation.role or session.workstationRole))
+    ui.kv("Agent", tostring(agent.name or session.agentName))
+    ui.kv("Clearance", tostring(agent.clearance or session.agentClearance))
+    ui.kv("Runtime session agent", tostring(runtimeSession.agentName or "unknown"))
+
+    ui.spacer()
+    ui.section("Devices")
+    ui.kv("Glasses", tostring(devices:isAvailable("glasses")))
+    ui.kv("Printer", tostring(devices:isAvailable("printer")))
+    ui.kv("Scanner", tostring(devices:isAvailable("scanner")))
+
+    ui.spacer()
+    ui.section("Application Services")
+    ui.kv("Apps service available", tostring(apps ~= nil))
+    ui.kv("Apps registered", tostring(#catalog))
 
     for _, app in ipairs(catalog) do
-      ui.info(string.format("App %s: installed=%s enabled=%s", app.name, tostring(app.installed), tostring(app.enabled)))
+      ui.kv(app.name, string.format("installed=%s enabled=%s", tostring(app.installed), tostring(app.enabled)))
     end
 
     ui.pause()
