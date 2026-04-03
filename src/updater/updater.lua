@@ -23,7 +23,13 @@ local function ensureDir(path)
 end
 
 local function run(command, ...)
-  local ok, reason = shell.execute(command, ...)
+  local args = {...}
+  local commandLine = command
+  for _, value in ipairs(args) do
+    commandLine = commandLine .. " \"" .. tostring(value) .. "\""
+  end
+
+  local ok, reason = shell.execute(commandLine)
   if ok == false then
     return nil, reason
   end
