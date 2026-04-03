@@ -72,6 +72,18 @@ Changer explicitement l'URL du manifest :
 lua /tmp/aeon-updater.lua --manifest https://raw.githubusercontent.com/Salweth/A.E.O.N/main/src/updater/release_manifest.lua
 ```
 
+Reinstaller proprement AEON :
+
+```text
+lua /tmp/aeon-updater.lua --clean
+```
+
+Reinstaller puis redemarrer le poste :
+
+```text
+lua /tmp/aeon-updater.lua --clean --reboot
+```
+
 ## Resultat attendu
 
 Le script installe :
@@ -79,3 +91,8 @@ Le script installe :
 - `/aeon/...`
 - `/bin/aeon`
 - `/aeon/config/version.txt`
+
+En mode `--clean`, il supprime d'abord :
+
+- `/aeon`
+- `/bin/aeon`

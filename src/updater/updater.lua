@@ -6,6 +6,8 @@ local repo = options.repo or "Salweth/A.E.O.N"
 local branch = options.branch or "main"
 local manifestUrl = options.manifest or ("https://raw.githubusercontent.com/" .. repo .. "/" .. branch .. "/src/updater/release_manifest.lua")
 local tempManifestPath = "/tmp/aeon-release-manifest.lua"
+local cleanInstall = options.clean == true
+local rebootAfterInstall = options.reboot == true
 
 local function info(message)
   io.write("[AEON updater] " .. tostring(message or "") .. "\n")
@@ -90,10 +92,26 @@ local function removeFileIfExists(path)
   end
 end
 
+local function removeTreeIfExists(path)
+  if filesystem.exists(path) then
+    filesystem.remove(path)
+  end
+end
+
+local function cleanInstallTargets()
+  info("Clean mode enabled")
+  removeTreeIfExists("/aeon")
+  removeFileIfExists("/bin/aeon")
+end
+
 local function installFromManifest(manifest)
   local releaseRepo = manifest.repo or repo
   local releaseBranch = manifest.branch or branch
   local baseUrl = "https://raw.githubusercontent.com/" .. releaseRepo .. "/" .. releaseBranch .. "/"
+
+  if cleanInstall then
+    cleanInstallTargets()
+  end
 
   info("Preparing directories")
   for _, path in ipairs(manifest.directories or {}) do
@@ -142,6 +160,12 @@ local function main()
 
   info("Update complete.")
   info("Launch with: aeon")
+
+  if rebootAfterInstall then
+    info("Reboot requested.")
+    run("reboot")
+  end
+
   return true
 end
 
