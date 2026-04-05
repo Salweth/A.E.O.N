@@ -16,7 +16,10 @@ function storageService.create(root)
   function service:init()
     ensureDir(self.root)
     ensureDir(filesystem.concat(self.root, "missions"))
-    ensureDir(filesystem.concat(self.root, "documents"))
+    ensureDir(filesystem.concat(self.root, "files"))
+    ensureDir(filesystem.concat(self.root, "downloads"))
+    ensureDir(filesystem.concat(self.root, "notes"))
+    ensureDir(filesystem.concat(self.root, "tmp"))
     return true
   end
 

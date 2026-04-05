@@ -77,7 +77,7 @@ Exemples de modules :
 Applications prevues en priorite :
 
 - `missions`
-- `documents`
+- `files`
 
 Chaque app doit etre autonome, lancable depuis le shell, et ne pas porter la responsabilite du systeme principal.
 Les apps sont modulables : un poste peut embarquer seulement les apps utiles a son role et a son equipement.
@@ -87,6 +87,17 @@ Exemples :
 - une app `glasses-config` peut exister sans etre installee partout
 - un poste sans lunettes AR ne doit pas embarquer cette app par defaut
 - les apps par defaut restent limitees aux besoins communs des agents
+
+### Separation entre fichiers locaux et documents officiels
+
+Le poste agent doit distinguer :
+
+- les fichiers locaux du poste
+- les documents officiels AEON
+
+Les fichiers locaux sont geres par l'app `files` et restent sur la machine.
+Les documents officiels AEON ne sont pas une simple vue sur le filesystem local.
+Ils devront plus tard etre servis par une infrastructure distante dediee.
 
 ## Contrat minimal d'une app
 
@@ -131,6 +142,7 @@ Il charge son manifest, construit un contexte systeme, puis execute son point d'
 Responsabilites :
 
 - stockage local
+- explorateur de fichiers locaux
 - identite machine
 - logs
 - configuration

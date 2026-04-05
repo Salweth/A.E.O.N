@@ -78,6 +78,10 @@ return {
       target = "/aeon/lib/aeon/services/devices.lua"
     },
     {
+      source = "src/rootfs/aeon/lib/aeon/services/filesystem.lua",
+      target = "/aeon/lib/aeon/services/filesystem.lua"
+    },
+    {
       source = "src/rootfs/aeon/lib/aeon/services/logger.lua",
       target = "/aeon/lib/aeon/services/logger.lua"
     },

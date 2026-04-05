@@ -14,7 +14,7 @@ Cette version repart sur une base plus propre que le prototype documentaire :
 ## Objectifs V2
 
 - construire un vrai shell principal AEON
-- integrer `missions` et `documents` comme applications
+- integrer `missions` et `files` comme applications
 - definir un systeme d'apps installables
 - preparer des services materiels comme les lunettes AR
 - rendre l'installation reproductible et desinstallable
@@ -54,6 +54,15 @@ Avec les principes suivants :
 - stub minimal dans `/bin` pour lancer l'OS facilement
 - seules les apps necessaires doivent etre presentes sur un poste
 - les services materiels restent optionnels
+
+## Separation des donnees
+
+AEON distingue deja deux familles de contenu :
+
+- les fichiers locaux du poste agent
+- les documents officiels AEON, qui vivront plus tard sur une infrastructure distante
+
+Dans la V2 actuelle, l'app locale `Files` sert d'explorateur du poste et travaille dans `/aeon/data/files`.
 
 ## Priorites immediates
 

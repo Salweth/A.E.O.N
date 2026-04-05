@@ -117,7 +117,7 @@ AEON distingue :
 Exemples :
 
 - `missions` : par defaut
-- `documents` : par defaut
+- `files` : par defaut
 - `glasses-config` : optionnelle
 
 ## Installation
