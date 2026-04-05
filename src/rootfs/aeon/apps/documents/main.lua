@@ -153,6 +153,7 @@ return {
     local fs = context.services.filesystem
     local currentPath = "/"
     local selectedIndex = 1
+    local previewOffset = 0
 
     while true do
       local entries, err = fs:list(currentPath)
@@ -171,18 +172,20 @@ return {
         selectedIndex = #entries
       end
 
-      local selected, action = ui.filesDashboard({
+      local selected, action, nextPreviewOffset = ui.filesDashboard({
         subtitle = "Local workstation explorer",
         path = displayPath(currentPath),
         root = fs:rootPath(),
         entries = entries,
         selectedIndex = selectedIndex,
+        previewOffset = previewOffset,
         previewProvider = function(entry)
           return buildPreview(fs, entry)
         end
       })
 
       selectedIndex = selected or selectedIndex
+      previewOffset = nextPreviewOffset or 0
       local selectedEntry = entries[selectedIndex]
 
       if action == "open" then
@@ -190,6 +193,7 @@ return {
           if selectedEntry.isDirectory then
             currentPath = selectedEntry.path
             selectedIndex = 1
+            previewOffset = 0
           else
             local action = ui.menu({
               {label = "View file"},
@@ -206,6 +210,7 @@ return {
       elseif action == "parent" then
         currentPath = fs:parent(currentPath)
         selectedIndex = 1
+        previewOffset = 0
       elseif action == "mkdir" then
         local name = ui.prompt("New folder name")
         if name and name ~= "" then
@@ -268,6 +273,7 @@ return {
             else
               ui.ok("Entry moved.")
               selectedIndex = 1
+              previewOffset = 0
             end
             ui.pause()
           end

@@ -581,6 +581,7 @@ function terminal.filesDashboard(state)
   local entries = state.entries or {}
   local selectedIndex = state.selectedIndex or 1
   local previewProvider = state.previewProvider
+  local previewOffset = state.previewOffset or 0
 
   if selectedIndex < 1 then
     selectedIndex = 1
@@ -627,7 +628,7 @@ function terminal.filesDashboard(state)
       {label = "Refresh"},
       {label = "Exit"}
     })
-    return selectedIndex, actions[choice] and actions[choice].id or nil
+    return selectedIndex, actions[choice] and actions[choice].id or nil, previewOffset
   end
 
   local width, height = resolution()
@@ -723,14 +724,22 @@ function terminal.filesDashboard(state)
         if preview and preview ~= "" then
           local previewY = listY + 11
           local maxPreviewLines = math.max(1, infoH - 13)
-          local lineIndex = 0
+          local allLines = {}
           for line in (preview .. "\n"):gmatch("(.-)\n") do
-            lineIndex = lineIndex + 1
-            if lineIndex > maxPreviewLines then
+            table.insert(allLines, line)
+          end
+          local maxOffset = math.max(0, #allLines - maxPreviewLines)
+          local offset = math.min(math.max(0, previewOffset), maxOffset)
+
+          for lineIndex = 1, maxPreviewLines do
+            local line = allLines[offset + lineIndex]
+            if not line then
               break
             end
             drawText(infoX + 4, previewY + lineIndex - 1, clip(line, infoW - 6), palette.text, palette.panelAlt)
           end
+
+          drawText(infoX + 2, listY + infoH - 2, string.format("Scroll %d/%d", offset + 1, maxOffset + 1), palette.dim, palette.panelAlt, infoW - 4)
         else
           drawText(infoX + 4, listY + 11, "(empty file)", palette.warn, palette.panelAlt, infoW - 6)
         end
@@ -773,7 +782,8 @@ function terminal.filesDashboard(state)
       })
     end
 
-    drawText(3, height - 1, "Files // arrows to move, enter to open, numbers for actions, touch to select.", palette.dim, palette.bg, width - 6)
+    drawText(3, height - 2, "Files // arrows move list, left/right scroll preview, enter opens.", palette.dim, palette.bg, width - 6)
+    drawText(3, height - 1, "Numbers trigger actions, backspace goes parent, touch selects.", palette.dim, palette.bg, width - 6)
     return listButtons, actionButtons
   end
 
@@ -791,9 +801,10 @@ function terminal.filesDashboard(state)
         if touchedEntry then
           if touchedEntry == selectedIndex then
             playCue("click")
-            return selectedIndex, "open"
+            return selectedIndex, "open", previewOffset
           end
           selectedIndex = touchedEntry
+          previewOffset = 0
           playCue("focus")
           listButtons, actionButtons = render(selectedIndex)
         else
@@ -801,7 +812,7 @@ function terminal.filesDashboard(state)
             if x >= button.x1 and x <= button.x2 and y >= button.y1 and y <= button.y2 then
               playCue("confirm")
               listButtons, actionButtons = render(selectedIndex, button.id)
-              return selectedIndex, button.id
+              return selectedIndex, button.id, previewOffset
             end
           end
         end
@@ -822,27 +833,39 @@ function terminal.filesDashboard(state)
         if action then
           playCue("confirm")
           listButtons, actionButtons = render(selectedIndex, action.id)
-          return selectedIndex, action.id
+          return selectedIndex, action.id, previewOffset
         end
       end
 
       if okKeyboard and keyboard then
         if code == keyboard.keys.up and #entries > 0 then
           selectedIndex = selectedIndex <= 1 and #entries or (selectedIndex - 1)
+          previewOffset = 0
           playCue("focus")
           listButtons, actionButtons = render(selectedIndex)
         elseif code == keyboard.keys.down and #entries > 0 then
           selectedIndex = selectedIndex >= #entries and 1 or (selectedIndex + 1)
+          previewOffset = 0
+          playCue("focus")
+          listButtons, actionButtons = render(selectedIndex)
+        elseif code == keyboard.keys.left then
+          if previewOffset > 0 then
+            previewOffset = math.max(0, previewOffset - 1)
+            playCue("focus")
+            listButtons, actionButtons = render(selectedIndex)
+          end
+        elseif code == keyboard.keys.right then
+          previewOffset = previewOffset + 1
           playCue("focus")
           listButtons, actionButtons = render(selectedIndex)
         elseif code == keyboard.keys.enter then
           playCue("confirm")
           listButtons, actionButtons = render(selectedIndex, "open")
-          return selectedIndex, "open"
+          return selectedIndex, "open", previewOffset
         elseif code == keyboard.keys.back then
           playCue("confirm")
           listButtons, actionButtons = render(selectedIndex, "parent")
-          return selectedIndex, "parent"
+          return selectedIndex, "parent", previewOffset
         end
       end
     end
