@@ -596,6 +596,8 @@ function terminal.filesDashboard(state)
     {id = "mkdir", label = "New Folder"},
     {id = "newfile", label = "New File"},
     {id = "rename", label = "Rename"},
+    {id = "copy", label = "Copy"},
+    {id = "move", label = "Move"},
     {id = "delete", label = "Delete"},
     {id = "refresh", label = "Refresh"},
     {id = "exit", label = "Exit"}
@@ -618,6 +620,8 @@ function terminal.filesDashboard(state)
       {label = "New Folder"},
       {label = "New File"},
       {label = "Rename"},
+      {label = "Copy"},
+      {label = "Move"},
       {label = "Delete"},
       {label = "Refresh"},
       {label = "Exit"}
@@ -782,8 +786,15 @@ function terminal.filesDashboard(state)
       local char = signal[3]
       local code = signal[4]
 
-      if char and char >= 49 and char <= 56 then
-        local action = actions[char - 48]
+      local actionIndex = nil
+      if char and char >= 49 and char <= 57 then
+        actionIndex = char - 48
+      elseif char == 48 then
+        actionIndex = 10
+      end
+
+      if actionIndex then
+        local action = actions[actionIndex]
         if action then
           playCue("confirm")
           listButtons, actionButtons = render(selectedIndex, action.id)

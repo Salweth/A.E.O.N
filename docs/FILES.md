@@ -27,7 +27,9 @@ Sous-dossiers prepares par defaut :
 - creer un dossier
 - creer un fichier texte
 - lire un fichier texte
-- editer un fichier texte simple
+- editer un fichier texte avec plusieurs modes
+- copier un fichier ou un dossier
+- deplacer un fichier ou un dossier
 - renommer
 - supprimer
 

@@ -21,6 +21,18 @@ local function readMultiline(ui)
   return table.concat(lines, "\n")
 end
 
+local function appendText(original, extra)
+  local base = tostring(original or "")
+  local suffix = tostring(extra or "")
+  if base == "" then
+    return suffix
+  end
+  if suffix == "" then
+    return base
+  end
+  return base .. "\n" .. suffix
+end
+
 local function showFile(ui, fs, relativePath)
   local content, err = fs:readText(relativePath)
   if not content then
@@ -42,24 +54,85 @@ local function showFile(ui, fs, relativePath)
 end
 
 local function editFile(ui, fs, relativePath)
-  local existing = fs:readText(relativePath)
-  ui.header("Files", "Editing " .. displayPath(relativePath))
-  if existing and existing ~= "" then
-    ui.section("Current Content")
-    for line in (existing .. "\n"):gmatch("(.-)\n") do
-      ui.info(line)
-    end
-    ui.spacer()
+  local existing, readErr = fs:readText(relativePath)
+  if existing == nil then
+    ui.error(readErr or "Unable to load file.")
+    ui.pause()
+    return
   end
 
-  local content = readMultiline(ui)
-  local ok, err = fs:updateText(relativePath, content)
-  if not ok then
-    ui.error(err or "Unable to save file.")
-  else
-    ui.ok("File updated.")
+  while true do
+    ui.header("Files", "Editing " .. displayPath(relativePath))
+    ui.section("Current Content")
+    if existing == "" then
+      ui.warn("File is currently empty.")
+    else
+      for line in (existing .. "\n"):gmatch("(.-)\n") do
+        ui.info(line)
+      end
+    end
+
+    ui.spacer()
+    local action = ui.menu({
+      {label = "Replace content"},
+      {label = "Append text"},
+      {label = "Add quick line"},
+      {label = "Clear file"},
+      {label = "Return"}
+    })
+
+    if action == 1 then
+      ui.header("Files", "Replace content")
+      local content = readMultiline(ui)
+      local ok, err = fs:updateText(relativePath, content)
+      if not ok then
+        ui.error(err or "Unable to save file.")
+      else
+        existing = content
+        ui.ok("File replaced.")
+      end
+      ui.pause()
+    elseif action == 2 then
+      ui.header("Files", "Append text")
+      local content = readMultiline(ui)
+      local merged = appendText(existing, content)
+      local ok, err = fs:updateText(relativePath, merged)
+      if not ok then
+        ui.error(err or "Unable to save file.")
+      else
+        existing = merged
+        ui.ok("Text appended.")
+      end
+      ui.pause()
+    elseif action == 3 then
+      local line = ui.prompt("Line to append")
+      if line and line ~= "" then
+        local merged = appendText(existing, line)
+        local ok, err = fs:updateText(relativePath, merged)
+        if not ok then
+          ui.error(err or "Unable to save file.")
+        else
+          existing = merged
+          ui.ok("Line appended.")
+        end
+        ui.pause()
+      end
+    elseif action == 4 then
+      local confirm = ui.prompt("Type CLEAR to confirm")
+      if confirm == "CLEAR" then
+        local ok, err = fs:updateText(relativePath, "")
+        if not ok then
+          ui.error(err or "Unable to clear file.")
+        else
+          existing = ""
+          ui.ok("File cleared.")
+        end
+        ui.pause()
+      end
+    else
+      return
+    end
   end
-  ui.pause()
 end
 
 return {
@@ -151,6 +224,35 @@ return {
               ui.error(renameErr or "Unable to rename entry.")
             else
               ui.ok("Entry renamed.")
+            end
+            ui.pause()
+          end
+        end
+      elseif action == "copy" then
+        if selectedEntry then
+          local destination = ui.prompt("Destination folder path")
+          if destination and destination ~= "" then
+            local newName = ui.prompt("Copy name (leave blank to keep)")
+            local ok, copyErr = fs:copy(selectedEntry.path, destination, newName ~= "" and newName or nil)
+            if not ok then
+              ui.error(copyErr or "Unable to copy entry.")
+            else
+              ui.ok("Entry copied.")
+            end
+            ui.pause()
+          end
+        end
+      elseif action == "move" then
+        if selectedEntry then
+          local destination = ui.prompt("Destination folder path")
+          if destination and destination ~= "" then
+            local newName = ui.prompt("New name at destination (leave blank to keep)")
+            local ok, moveErr = fs:move(selectedEntry.path, destination, newName ~= "" and newName or nil)
+            if not ok then
+              ui.error(moveErr or "Unable to move entry.")
+            else
+              ui.ok("Entry moved.")
+              selectedIndex = 1
             end
             ui.pause()
           end

@@ -38,6 +38,37 @@ local function writeFile(path, content)
   return true
 end
 
+local function basename(path)
+  local value = tostring(path or ""):gsub("\\", "/"):gsub("/+$", "")
+  return value:match("([^/]+)$") or value
+end
+
+local function copyRecursive(source, target)
+  if filesystem.isDirectory(source) then
+    if not filesystem.exists(target) then
+      filesystem.makeDirectory(target)
+    end
+
+    for name in filesystem.list(source) do
+      local cleanName = tostring(name or ""):gsub("/$", "")
+      local childSource = filesystem.concat(source, cleanName)
+      local childTarget = filesystem.concat(target, cleanName)
+      local ok, err = copyRecursive(childSource, childTarget)
+      if not ok then
+        return nil, err
+      end
+    end
+
+    return true
+  end
+
+  local content, err = readFile(source)
+  if content == nil then
+    return nil, err
+  end
+  return writeFile(target, content)
+end
+
 function filesystemService.create(root)
   local service = {
     root = root or "/aeon/data/files"
@@ -189,6 +220,14 @@ function filesystemService.create(root)
     return readFile(path)
   end
 
+  function service:exists(relativePath)
+    local path, err = self:resolve(relativePath)
+    if not path then
+      return nil, err
+    end
+    return filesystem.exists(path)
+  end
+
   function service:updateText(relativePath, content)
     local path, err = self:resolve(relativePath)
     if not path then
@@ -243,6 +282,86 @@ function filesystemService.create(root)
     if not ok then
       return nil, "Rename failed."
     end
+    return true
+  end
+
+  function service:copy(relativePath, destinationFolderRelativePath, newName)
+    local source, sourceErr = self:resolve(relativePath)
+    if not source then
+      return nil, sourceErr
+    end
+    if not filesystem.exists(source) then
+      return nil, "Source entry does not exist."
+    end
+
+    local destinationFolder, destErr = self:resolve(destinationFolderRelativePath)
+    if not destinationFolder then
+      return nil, destErr
+    end
+    if not filesystem.exists(destinationFolder) or not filesystem.isDirectory(destinationFolder) then
+      return nil, "Destination folder does not exist."
+    end
+
+    local finalName = trimSlashes(newName or basename(source))
+    if finalName == "" then
+      return nil, "Destination name is required."
+    end
+    if finalName:find("/") then
+      return nil, "Nested destination names are not allowed."
+    end
+
+    local target = filesystem.concat(destinationFolder, finalName)
+    if filesystem.exists(target) then
+      return nil, "Destination entry already exists."
+    end
+
+    return copyRecursive(source, target)
+  end
+
+  function service:move(relativePath, destinationFolderRelativePath, newName)
+    local source, sourceErr = self:resolve(relativePath)
+    if not source then
+      return nil, sourceErr
+    end
+    if source == self.root then
+      return nil, "Cannot move the root files directory."
+    end
+    if not filesystem.exists(source) then
+      return nil, "Source entry does not exist."
+    end
+
+    local destinationFolder, destErr = self:resolve(destinationFolderRelativePath)
+    if not destinationFolder then
+      return nil, destErr
+    end
+    if not filesystem.exists(destinationFolder) or not filesystem.isDirectory(destinationFolder) then
+      return nil, "Destination folder does not exist."
+    end
+
+    local finalName = trimSlashes(newName or basename(source))
+    if finalName == "" then
+      return nil, "Destination name is required."
+    end
+    if finalName:find("/") then
+      return nil, "Nested destination names are not allowed."
+    end
+
+    local target = filesystem.concat(destinationFolder, finalName)
+    if filesystem.exists(target) then
+      return nil, "Destination entry already exists."
+    end
+
+    local ok = filesystem.rename(source, target)
+    if ok then
+      return true
+    end
+
+    local copied, copyErr = copyRecursive(source, target)
+    if not copied then
+      return nil, copyErr
+    end
+
+    filesystem.remove(source)
     return true
   end
 
