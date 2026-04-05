@@ -159,9 +159,10 @@ function terminal.clear()
   if canDraw() then
     setColors(palette.text, palette.bg)
     gpu.fill(1, 1, width, height, " ")
-  end
-
-  if okTerm and term then
+    if okTerm and term then
+      term.setCursor(1, 1)
+    end
+  elseif okTerm and term then
     term.clear()
     term.setCursor(1, 1)
   end
@@ -642,7 +643,7 @@ function terminal.filesDashboard(state)
   local actionY = listY + infoH + 1
   local actionH = listH - infoH - 1
 
-  local function render(currentSelection, armedAction)
+  local function renderChrome()
     terminal.clear()
     drawBox(2, 1, width - 2, 6, "AEON // FILES", {
       fg = palette.line,
@@ -657,6 +658,24 @@ function terminal.filesDashboard(state)
       bg = palette.panelAlt,
       title = palette.accentAlt
     })
+    drawBox(infoX, listY, infoW, infoH, "Selection Details", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+    drawBox(infoX, actionY, infoW, actionH, "Command Deck", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+    drawText(3, height - 2, "Files // arrows move list, left/right scroll preview, enter opens.", palette.dim, palette.bg, width - 6)
+    drawText(3, height - 1, "Numbers trigger actions, backspace goes parent, touch selects.", palette.dim, palette.bg, width - 6)
+  end
+
+  local function render(currentSelection, armedAction)
+    fill(listX + 1, listY + 1, listW - 2, listH - 2, " ", palette.text, palette.panelAlt)
+    fill(infoX + 1, listY + 1, infoW - 2, infoH - 2, " ", palette.text, palette.panelAlt)
+    fill(infoX + 1, actionY + 1, infoW - 2, actionH - 2, " ", palette.text, palette.panelAlt)
 
     drawText(listX + 2, listY + 1, "Current", palette.dim, palette.panelAlt)
     drawText(listX + 12, listY + 1, clip(state.path or "/", listW - 14), palette.text, palette.panelAlt)
@@ -696,12 +715,6 @@ function terminal.filesDashboard(state)
         active = true
       })
     end
-
-    drawBox(infoX, listY, infoW, infoH, "Selection Details", {
-      fg = palette.line,
-      bg = palette.panelAlt,
-      title = palette.accentAlt
-    })
 
     local selected = entries[currentSelection]
     if selected then
@@ -749,12 +762,6 @@ function terminal.filesDashboard(state)
       drawText(infoX + 2, listY + 4, "Create a folder or a file to start.", palette.dim, palette.panelAlt, infoW - 4)
     end
 
-    drawBox(infoX, actionY, infoW, actionH, "Command Deck", {
-      fg = palette.line,
-      bg = palette.panelAlt,
-      title = palette.accentAlt
-    })
-
     local actionButtons = {}
     local buttonWidth = math.floor((infoW - 6) / 2)
     for index, action in ipairs(actions) do
@@ -781,12 +788,10 @@ function terminal.filesDashboard(state)
         active = true
       })
     end
-
-    drawText(3, height - 2, "Files // arrows move list, left/right scroll preview, enter opens.", palette.dim, palette.bg, width - 6)
-    drawText(3, height - 1, "Numbers trigger actions, backspace goes parent, touch selects.", palette.dim, palette.bg, width - 6)
     return listButtons, actionButtons
   end
 
+  renderChrome()
   local listButtons, actionButtons = render(selectedIndex)
 
   while true do
