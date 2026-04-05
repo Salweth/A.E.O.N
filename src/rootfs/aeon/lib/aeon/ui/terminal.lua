@@ -580,6 +580,7 @@ end
 function terminal.filesDashboard(state)
   local entries = state.entries or {}
   local selectedIndex = state.selectedIndex or 1
+  local preview = state.preview
 
   if selectedIndex < 1 then
     selectedIndex = 1
@@ -711,6 +712,24 @@ function terminal.filesDashboard(state)
       drawText(infoX + 12, listY + 6, clip(selected.path, infoW - 14), palette.text, palette.panelAlt)
       drawText(infoX + 2, listY + 8, "Action", palette.dim, palette.panelAlt)
       drawText(infoX + 12, listY + 8, selected.isDirectory and "Open folder" or "Open or edit file", palette.ok, palette.panelAlt)
+
+      if not selected.isDirectory then
+        drawText(infoX + 2, listY + 10, "Preview", palette.dim, palette.panelAlt)
+        if preview and preview ~= "" then
+          local previewY = listY + 11
+          local maxPreviewLines = math.max(1, infoH - 13)
+          local lineIndex = 0
+          for line in (preview .. "\n"):gmatch("(.-)\n") do
+            lineIndex = lineIndex + 1
+            if lineIndex > maxPreviewLines then
+              break
+            end
+            drawText(infoX + 4, previewY + lineIndex - 1, clip(line, infoW - 6), palette.text, palette.panelAlt)
+          end
+        else
+          drawText(infoX + 4, listY + 11, "(empty file)", palette.warn, palette.panelAlt, infoW - 6)
+        end
+      end
     else
       drawText(infoX + 2, listY + 2, "No selection available.", palette.warn, palette.panelAlt)
       drawText(infoX + 2, listY + 4, "Create a folder or a file to start.", palette.dim, palette.panelAlt, infoW - 4)

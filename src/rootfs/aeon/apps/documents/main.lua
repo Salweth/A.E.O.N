@@ -33,6 +33,18 @@ local function appendText(original, extra)
   return base .. "\n" .. suffix
 end
 
+local function buildPreview(fs, entry)
+  if not entry or entry.isDirectory then
+    return nil
+  end
+
+  local content = fs:readText(entry.path)
+  if not content then
+    return nil
+  end
+  return tostring(content or "")
+end
+
 local function showFile(ui, fs, relativePath)
   local content, err = fs:readText(relativePath)
   if not content then
@@ -159,12 +171,14 @@ return {
         selectedIndex = #entries
       end
 
+      local preview = buildPreview(fs, entries[selectedIndex])
       local selected, action = ui.filesDashboard({
         subtitle = "Local workstation explorer",
         path = displayPath(currentPath),
         root = fs:rootPath(),
         entries = entries,
-        selectedIndex = selectedIndex
+        selectedIndex = selectedIndex,
+        preview = preview
       })
 
       selectedIndex = selected or selectedIndex
