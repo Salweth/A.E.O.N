@@ -577,6 +577,243 @@ function terminal.dashboard(session, devices, menuItems)
   end
 end
 
+function terminal.filesDashboard(state)
+  local entries = state.entries or {}
+  local selectedIndex = state.selectedIndex or 1
+
+  if selectedIndex < 1 then
+    selectedIndex = 1
+  end
+  if #entries == 0 then
+    selectedIndex = 0
+  elseif selectedIndex > #entries then
+    selectedIndex = #entries
+  end
+
+  local actions = {
+    {id = "open", label = "Open"},
+    {id = "parent", label = "Parent"},
+    {id = "mkdir", label = "New Folder"},
+    {id = "newfile", label = "New File"},
+    {id = "rename", label = "Rename"},
+    {id = "delete", label = "Delete"},
+    {id = "refresh", label = "Refresh"},
+    {id = "exit", label = "Exit"}
+  }
+
+  if not canDraw() or not okEvent or not event then
+    terminal.header("Files", state.subtitle or "Local workstation explorer")
+    terminal.kv("Path", state.path or "/")
+    terminal.kv("Root", state.root or "/aeon/data/files")
+    terminal.spacer()
+    for index, entry in ipairs(entries) do
+      local marker = index == selectedIndex and ">" or " "
+      local kind = entry.isDirectory and "DIR " or "FILE"
+      terminal.info(string.format("%s %d. [%s] %s", marker, index, kind, entry.name))
+    end
+    terminal.spacer()
+    local choice = terminal.menu({
+      {label = "Open"},
+      {label = "Parent"},
+      {label = "New Folder"},
+      {label = "New File"},
+      {label = "Rename"},
+      {label = "Delete"},
+      {label = "Refresh"},
+      {label = "Exit"}
+    })
+    return selectedIndex, actions[choice] and actions[choice].id or nil
+  end
+
+  local width, height = resolution()
+  local listX = 3
+  local listY = 8
+  local listW = math.floor((width - 6) * 0.58)
+  local infoX = listX + listW + 2
+  local infoW = width - infoX - 1
+  local listH = math.max(14, height - 15)
+  local infoH = math.max(10, math.floor((listH - 1) * 0.58))
+  local actionY = listY + infoH + 1
+  local actionH = listH - infoH - 1
+
+  local function render(currentSelection, armedAction)
+    terminal.clear()
+    drawBox(2, 1, width - 2, 6, "AEON // FILES", {
+      fg = palette.line,
+      bg = palette.panel,
+      title = palette.accent
+    })
+    drawText(4, 3, clip(state.subtitle or "Local workstation explorer", width - 8), palette.text, palette.panel)
+    drawText(4, 4, clip("Path " .. tostring(state.path or "/"), width - 8), palette.dim, palette.panel)
+
+    drawBox(listX, listY, listW, listH, "Directory Listing", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+
+    drawText(listX + 2, listY + 1, "Current", palette.dim, palette.panelAlt)
+    drawText(listX + 12, listY + 1, clip(state.path or "/", listW - 14), palette.text, palette.panelAlt)
+    drawText(listX + 2, listY + 2, "Entries", palette.dim, palette.panelAlt)
+    drawText(listX + 12, listY + 2, tostring(#entries), palette.text, palette.panelAlt)
+
+    local visibleRows = math.max(4, listH - 5)
+    local startIndex = 1
+    if currentSelection > visibleRows then
+      startIndex = currentSelection - visibleRows + 1
+    end
+
+    local listButtons = {}
+    for row = 1, visibleRows do
+      local index = startIndex + row - 1
+      if index > #entries then
+        break
+      end
+      local entry = entries[index]
+      local rowY = listY + 2 + row
+      local selected = index == currentSelection
+      local bg = selected and palette.accent or palette.panel
+      local fg = selected and palette.bg or palette.text
+      local kindColor = selected and palette.bg or (entry.isDirectory and palette.accentAlt or palette.accent)
+
+      fill(listX + 2, rowY, listW - 4, 1, " ", fg, bg)
+      drawText(listX + 3, rowY, string.format("%02d", index), kindColor, bg)
+      drawText(listX + 7, rowY, entry.isDirectory and "[DIR]" or "[TXT]", kindColor, bg)
+      drawText(listX + 13, rowY, clip(entry.name, listW - 16), fg, bg)
+
+      table.insert(listButtons, {
+        index = index,
+        x1 = listX + 2,
+        y1 = rowY,
+        x2 = listX + listW - 3,
+        y2 = rowY,
+        active = true
+      })
+    end
+
+    drawBox(infoX, listY, infoW, infoH, "Selection Details", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+
+    local selected = entries[currentSelection]
+    if selected then
+      drawText(infoX + 2, listY + 2, "Name", palette.dim, palette.panelAlt)
+      drawText(infoX + 12, listY + 2, clip(selected.name, infoW - 14), palette.text, palette.panelAlt)
+      drawText(infoX + 2, listY + 4, "Type", palette.dim, palette.panelAlt)
+      drawText(infoX + 12, listY + 4, selected.isDirectory and "Folder" or "Text file", palette.text, palette.panelAlt)
+      drawText(infoX + 2, listY + 6, "Path", palette.dim, palette.panelAlt)
+      drawText(infoX + 12, listY + 6, clip(selected.path, infoW - 14), palette.text, palette.panelAlt)
+      drawText(infoX + 2, listY + 8, "Action", palette.dim, palette.panelAlt)
+      drawText(infoX + 12, listY + 8, selected.isDirectory and "Open folder" or "Open or edit file", palette.ok, palette.panelAlt)
+    else
+      drawText(infoX + 2, listY + 2, "No selection available.", palette.warn, palette.panelAlt)
+      drawText(infoX + 2, listY + 4, "Create a folder or a file to start.", palette.dim, palette.panelAlt, infoW - 4)
+    end
+
+    drawBox(infoX, actionY, infoW, actionH, "Command Deck", {
+      fg = palette.line,
+      bg = palette.panelAlt,
+      title = palette.accentAlt
+    })
+
+    local actionButtons = {}
+    local buttonWidth = math.floor((infoW - 6) / 2)
+    for index, action in ipairs(actions) do
+      local col = ((index - 1) % 2)
+      local row = math.floor((index - 1) / 2)
+      local buttonX = infoX + 2 + (col * buttonWidth)
+      local buttonY = actionY + 1 + (row * 2)
+      local armed = armedAction == action.id
+      local bg = armed and palette.accentAlt or palette.panel
+      local fg = armed and palette.bg or palette.text
+      local accent = armed and palette.bg or palette.accent
+
+      fill(buttonX, buttonY, buttonWidth - 1, 1, " ", fg, bg)
+      drawText(buttonX + 1, buttonY, tostring(index) .. ".", accent, bg)
+      drawText(buttonX + 5, buttonY, clip(action.label, buttonWidth - 7), fg, bg)
+
+      table.insert(actionButtons, {
+        id = action.id,
+        index = index,
+        x1 = buttonX,
+        y1 = buttonY,
+        x2 = buttonX + buttonWidth - 2,
+        y2 = buttonY,
+        active = true
+      })
+    end
+
+    drawText(3, height - 1, "Files // arrows to move, enter to open, numbers for actions, touch to select.", palette.dim, palette.bg, width - 6)
+    return listButtons, actionButtons
+  end
+
+  local listButtons, actionButtons = render(selectedIndex)
+
+  while true do
+    local signal = {event.pull()}
+    local name = signal[1]
+
+    if name == "touch" then
+      local x = signal[3]
+      local y = signal[4]
+      if not isDebouncedTouch(x, y) then
+        local touchedEntry = selectionFromTouch(x, y, listButtons)
+        if touchedEntry then
+          if touchedEntry == selectedIndex then
+            playCue("click")
+            return selectedIndex, "open"
+          end
+          selectedIndex = touchedEntry
+          playCue("focus")
+          listButtons, actionButtons = render(selectedIndex)
+        else
+          for _, button in ipairs(actionButtons) do
+            if x >= button.x1 and x <= button.x2 and y >= button.y1 and y <= button.y2 then
+              playCue("confirm")
+              listButtons, actionButtons = render(selectedIndex, button.id)
+              return selectedIndex, button.id
+            end
+          end
+        end
+      end
+    elseif name == "key_down" then
+      local char = signal[3]
+      local code = signal[4]
+
+      if char and char >= 49 and char <= 56 then
+        local action = actions[char - 48]
+        if action then
+          playCue("confirm")
+          listButtons, actionButtons = render(selectedIndex, action.id)
+          return selectedIndex, action.id
+        end
+      end
+
+      if okKeyboard and keyboard then
+        if code == keyboard.keys.up and #entries > 0 then
+          selectedIndex = selectedIndex <= 1 and #entries or (selectedIndex - 1)
+          playCue("focus")
+          listButtons, actionButtons = render(selectedIndex)
+        elseif code == keyboard.keys.down and #entries > 0 then
+          selectedIndex = selectedIndex >= #entries and 1 or (selectedIndex + 1)
+          playCue("focus")
+          listButtons, actionButtons = render(selectedIndex)
+        elseif code == keyboard.keys.enter then
+          playCue("confirm")
+          listButtons, actionButtons = render(selectedIndex, "open")
+          return selectedIndex, "open"
+        elseif code == keyboard.keys.back then
+          playCue("confirm")
+          listButtons, actionButtons = render(selectedIndex, "parent")
+          return selectedIndex, "parent"
+        end
+      end
+    end
+  end
+end
+
 function terminal.prompt(label)
   if canDraw() then
     drawText(4, cursorY, tostring(label or "Input") .. " >", palette.dim, palette.bg)

@@ -5,23 +5,6 @@ local function displayPath(path)
   return path
 end
 
-local function chooseEntry(ui, entries)
-  if #entries == 0 then
-    ui.warn("This folder is empty.")
-    ui.pause()
-    return nil
-  end
-
-  local raw = ui.prompt("Select entry number")
-  local index = tonumber(raw or "")
-  if not index or not entries[index] then
-    ui.warn("Invalid entry selection.")
-    ui.pause()
-    return nil
-  end
-  return entries[index]
-end
-
 local function readMultiline(ui)
   ui.section("Text Input")
   ui.info("Enter text line by line.")
@@ -84,6 +67,7 @@ return {
     local ui = context.ui
     local fs = context.services.filesystem
     local currentPath = "/"
+    local selectedIndex = 1
 
     while true do
       local entries, err = fs:list(currentPath)
@@ -94,39 +78,30 @@ return {
         return
       end
 
-      ui.header("Files", "Local workstation explorer")
-      ui.section("Current Folder")
-      ui.kv("Path", displayPath(currentPath))
-      ui.kv("Root", fs:rootPath())
-
-      ui.spacer()
-      ui.section("Folder Contents")
       if #entries == 0 then
-        ui.warn("No files or folders in this location.")
-      else
-        for index, entry in ipairs(entries) do
-          local kind = entry.isDirectory and "DIR " or "FILE"
-          ui.info(string.format("%d. [%s] %s", index, kind, entry.name))
-        end
+        selectedIndex = 0
+      elseif selectedIndex < 1 then
+        selectedIndex = 1
+      elseif selectedIndex > #entries then
+        selectedIndex = #entries
       end
 
-      ui.spacer()
-      local choice = ui.menu({
-        {label = "Open entry"},
-        {label = "Go to parent folder"},
-        {label = "Create folder"},
-        {label = "Create text file"},
-        {label = "Rename entry"},
-        {label = "Delete entry"},
-        {label = "Refresh"},
-        {label = "Exit"}
+      local selected, action = ui.filesDashboard({
+        subtitle = "Local workstation explorer",
+        path = displayPath(currentPath),
+        root = fs:rootPath(),
+        entries = entries,
+        selectedIndex = selectedIndex
       })
 
-      if choice == 1 then
-        local selected = chooseEntry(ui, entries)
-        if selected then
-          if selected.isDirectory then
-            currentPath = selected.path
+      selectedIndex = selected or selectedIndex
+      local selectedEntry = entries[selectedIndex]
+
+      if action == "open" then
+        if selectedEntry then
+          if selectedEntry.isDirectory then
+            currentPath = selectedEntry.path
+            selectedIndex = 1
           else
             local action = ui.menu({
               {label = "View file"},
@@ -134,15 +109,16 @@ return {
               {label = "Cancel"}
             })
             if action == 1 then
-              showFile(ui, fs, selected.path)
+              showFile(ui, fs, selectedEntry.path)
             elseif action == 2 then
-              editFile(ui, fs, selected.path)
+              editFile(ui, fs, selectedEntry.path)
             end
           end
         end
-      elseif choice == 2 then
+      elseif action == "parent" then
         currentPath = fs:parent(currentPath)
-      elseif choice == 3 then
+        selectedIndex = 1
+      elseif action == "mkdir" then
         local name = ui.prompt("New folder name")
         if name and name ~= "" then
           local ok, createErr = fs:makeDirectory(currentPath, name)
@@ -153,7 +129,7 @@ return {
           end
           ui.pause()
         end
-      elseif choice == 4 then
+      elseif action == "newfile" then
         local name = ui.prompt("New file name")
         if name and name ~= "" then
           ui.header("Files", "Create text file")
@@ -166,12 +142,11 @@ return {
           end
           ui.pause()
         end
-      elseif choice == 5 then
-        local selected = chooseEntry(ui, entries)
-        if selected then
+      elseif action == "rename" then
+        if selectedEntry then
           local newName = ui.prompt("New name")
           if newName and newName ~= "" then
-            local ok, renameErr = fs:rename(selected.path, newName)
+            local ok, renameErr = fs:rename(selectedEntry.path, newName)
             if not ok then
               ui.error(renameErr or "Unable to rename entry.")
             else
@@ -180,12 +155,11 @@ return {
             ui.pause()
           end
         end
-      elseif choice == 6 then
-        local selected = chooseEntry(ui, entries)
-        if selected then
+      elseif action == "delete" then
+        if selectedEntry then
           local confirm = ui.prompt("Type DELETE to confirm")
           if confirm == "DELETE" then
-            local ok, deleteErr = fs:delete(selected.path)
+            local ok, deleteErr = fs:delete(selectedEntry.path)
             if not ok then
               ui.error(deleteErr or "Unable to delete entry.")
             else
@@ -194,9 +168,9 @@ return {
             ui.pause()
           end
         end
-      elseif choice == 7 then
+      elseif action == "refresh" then
         -- Refresh loop iteration
-      elseif choice == 8 then
+      elseif action == "exit" then
         return
       else
         ui.warn("Invalid selection.")
