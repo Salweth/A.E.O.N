@@ -171,14 +171,15 @@ return {
         selectedIndex = #entries
       end
 
-      local preview = buildPreview(fs, entries[selectedIndex])
       local selected, action = ui.filesDashboard({
         subtitle = "Local workstation explorer",
         path = displayPath(currentPath),
         root = fs:rootPath(),
         entries = entries,
         selectedIndex = selectedIndex,
-        preview = preview
+        previewProvider = function(entry)
+          return buildPreview(fs, entry)
+        end
       })
 
       selectedIndex = selected or selectedIndex

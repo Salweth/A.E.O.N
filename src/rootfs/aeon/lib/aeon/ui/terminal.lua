@@ -580,7 +580,7 @@ end
 function terminal.filesDashboard(state)
   local entries = state.entries or {}
   local selectedIndex = state.selectedIndex or 1
-  local preview = state.preview
+  local previewProvider = state.previewProvider
 
   if selectedIndex < 1 then
     selectedIndex = 1
@@ -704,6 +704,11 @@ function terminal.filesDashboard(state)
 
     local selected = entries[currentSelection]
     if selected then
+      local preview = nil
+      if type(previewProvider) == "function" then
+        preview = previewProvider(selected)
+      end
+
       drawText(infoX + 2, listY + 2, "Name", palette.dim, palette.panelAlt)
       drawText(infoX + 12, listY + 2, clip(selected.name, infoW - 14), palette.text, palette.panelAlt)
       drawText(infoX + 2, listY + 4, "Type", palette.dim, palette.panelAlt)
